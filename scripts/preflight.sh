@@ -7,6 +7,21 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
+# Load credentials the same way the Makefile does, so running this script
+# directly behaves identically to `make preflight`. Anything already exported in
+# the environment wins over the file.
+ENV_FILE="${ENV_FILE:-idira-demo.env}"
+if [ -f "$ENV_FILE" ]; then
+  _pre_user="${IDSEC_SERVICE_USER:-}"
+  _pre_token="${IDSEC_SERVICE_TOKEN:-}"
+  set -a
+  # shellcheck disable=SC1090
+  . "./$ENV_FILE"
+  set +a
+  [ -n "$_pre_user" ] && export IDSEC_SERVICE_USER="$_pre_user"
+  [ -n "$_pre_token" ] && export IDSEC_SERVICE_TOKEN="$_pre_token"
+fi
+
 PASS=0
 FAIL=0
 
@@ -39,6 +54,13 @@ fi
 
 echo
 echo "Idira"
+if [ -f "$ENV_FILE" ]; then
+  ok "credentials file: $ENV_FILE"
+else
+  bad "no credentials file at $ENV_FILE"
+  note "cp idira-demo.env.example $ENV_FILE, then fill it in"
+  note "quote the values -- service tokens often contain shell metacharacters"
+fi
 if [ -n "${IDSEC_SERVICE_USER:-}" ]; then ok "IDSEC_SERVICE_USER set"; else bad "IDSEC_SERVICE_USER not set"; fi
 if [ -n "${IDSEC_SERVICE_TOKEN:-}" ]; then ok "IDSEC_SERVICE_TOKEN set"; else bad "IDSEC_SERVICE_TOKEN not set"; fi
 

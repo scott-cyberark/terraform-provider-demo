@@ -56,21 +56,31 @@ Files map one-to-one: [network.tf](network.tf), [connector.tf](connector.tf),
    HashiCorp's tap since the license change.
 
 2. **Idira service user** with the **DpaAdmin** role (required for both the
-   connector install and the SSH CA), plus Connector Management rights:
+   connector install and the SSH CA), plus Connector Management rights. The
+   service user must also be permitted on the `__idaptive_cybr_user_oidc` OAuth
+   app — if it is not, authentication fails with `access_denied` / "client not
+   allowed" even though the credentials are correct.
 
    ```bash
-   export IDSEC_SERVICE_USER='svc-terraform@your-tenant'
-   export IDSEC_SERVICE_TOKEN='...'
+   cp idira-demo.env.example idira-demo.env   # then fill it in
    ```
 
+   Single-quote the values. Service tokens routinely contain `) + < > ?`, and an
+   unquoted token fails with a shell parse error that looks nothing like a
+   credential problem.
+
    Service-user auth is used specifically so an MFA prompt cannot interrupt a
-   live demo.
+   live demo. Every `make` target sources this file, so nothing needs to be
+   exported in your shell.
 
 3. **AWS credentials** for an account you are happy to build a throwaway VPC in.
+   Note these are typically short-lived assumed-role tokens — refresh them
+   immediately before presenting, since an expiry mid-apply strands a
+   half-registered connector.
 
 4. **Config:**
    ```bash
-   cp terraform.tfvars.example terraform.tfvars   # set idsec_subdomain
+   cp terraform.tfvars.example terraform.tfvars   # set idsec_subdomain + policy_role_name
    make preflight
    ```
 
