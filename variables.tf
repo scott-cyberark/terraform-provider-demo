@@ -144,9 +144,14 @@ variable "policy_principals" {
 
 variable "ephemeral_username" {
   description = <<-EOT
-    Username SIA provisions on the target at connect time and removes afterwards.
-    This account does not exist on the box until someone connects -- that is the
-    zero-standing-privilege point of the demo.
+    The local account SIA logs in as. For Linux SSH, SIA authenticates as an
+    existing local user and presents a short-lived certificate -- the ephemeral
+    part is the certificate, not the OS account (unlike RDP, where SIA can
+    provision an ephemeral OS user).
+
+    target.tf creates this account with no password and no SSH key, so the only
+    way in is a certificate SIA signs for a single session. It must match the
+    policy's ssh_profile.username, which it does -- both read this variable.
   EOT
   type        = string
   default     = "demo_user"

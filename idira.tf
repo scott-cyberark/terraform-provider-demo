@@ -76,8 +76,10 @@ resource "idsec_policy_vm" "demo" {
 
   behavior = {
     ssh_profile = {
-      # SIA provisions this user on connect and removes it on disconnect. Before
-      # anyone connects, `getent passwd` on the target does not know the name.
+      # The existing local account SIA logs in as, presenting a short-lived
+      # certificate. target.tf creates this same account with no password and no
+      # SSH key, so the certificate is the only way in. Both read the same
+      # variable, so the names cannot drift.
       username = var.ephemeral_username
     }
   }

@@ -42,15 +42,26 @@ resource "aws_instance" "target" {
     encrypted   = true
   }
 
-  # Mirrors the paths and the validate-before-restart guard used by the idsec
-  # SDK's own CA install script, so this box is indistinguishable from one
-  # provisioned the supported way.
+  # Two steps, both matching how CyberArk documents Linux SIA access:
+  #
+  # 1. Install the SSH CA. Mirrors the paths and validate-before-restart guard
+  #    of the idsec SDK's own install script, so this box is indistinguishable
+  #    from one provisioned the supported way.
+  #
+  # 2. Create the login account. For Linux SSH, SIA authenticates "as an
+  #    existing local user of the target machine" -- the ephemeral part is the
+  #    short-lived certificate, not an ephemeral OS user (that is the RDP model).
+  #    So the account named in the policy's ssh_profile.username must exist, or
+  #    sshd rejects the certificate with "[none publickey]". We create it with
+  #    no password and no authorized_keys: the only way in is a certificate SIA
+  #    signs for a single session.
   user_data = <<-EOT
     #!/bin/bash
     set -euo pipefail
 
     ca_file=/etc/ssh/SIA_ssh_public_CA.pub
     sshd_config=/etc/ssh/sshd_config
+    login_user='${var.ephemeral_username}'
 
     printf '%s\n' '${local.sia_ssh_ca_public_key}' > "$ca_file"
     chmod 644 "$ca_file"
@@ -58,6 +69,15 @@ resource "aws_instance" "target" {
 
     if ! grep -q '^TrustedUserCAKeys' "$sshd_config"; then
       echo "TrustedUserCAKeys $ca_file" >> "$sshd_config"
+    fi
+
+    # The account SIA logs in as. useradd leaves the password locked, so there
+    # is no password login; we add no SSH key, so there is no key login either.
+    # Passwordless sudo lets the session demonstrate real privileged access.
+    if ! id -u "$login_user" >/dev/null 2>&1; then
+      useradd -m -s /bin/bash "$login_user"
+      echo "$login_user ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$login_user"
+      chmod 440 "/etc/sudoers.d/$login_user"
     fi
 
     # Never restart into a broken config -- roll back instead.
@@ -75,8 +95,8 @@ resource "aws_instance" "target" {
       ${var.demo_name} -- demo target
 
       No public IP. No inbound rule except the SIA connector.
-      No SSH key exists for this host.
-      You are here on a short-lived certificate, as an ephemeral user.
+      This account has no password and no SSH key.
+      You are here on a short-lived, single-session certificate.
 
     BANNER
   EOT

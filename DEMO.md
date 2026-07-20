@@ -41,7 +41,9 @@ Then `idira.tf`:
 
 - `targets.fqdnip_resource.ip_rules` is derived from `aws_instance.target.private_ip`
   — an attribute of the instance being created in the same apply.
-- `behavior.ssh_profile.username` is the ephemeral user.
+- `behavior.ssh_profile.username` is the local account SIA logs in as. The same
+  account is created on the target in `target.tf` with no password and no SSH
+  key -- so the only way in is the short-lived certificate SIA signs per session.
 - `conditions` caps the session at 1 hour and 10 idle minutes.
 
 ## 3. Apply (4–5 min, keep talking)
@@ -87,17 +89,25 @@ make access
 Connect through SIA. You land on the target. Show:
 
 ```bash
-whoami          # demo_user
-hostname -I     # 10.42.2.x
+whoami                        # demo_user
+hostname -I                   # 10.42.2.x
+sudo passwd --status demo_user  # "L" -- password is locked; no password login
+ls ~/.ssh 2>/dev/null || echo "no authorized_keys"  # no key login either
 cat /etc/motd
 ```
 
 Then, the line worth pausing on:
 
-> This account did not exist sixty seconds ago and won't exist in an hour.
-> I authenticated with a certificate that's valid for this session only. There is
-> no password, no key, and no standing access to revoke — because none was ever
-> granted.
+> This account has no password and no SSH key on it -- neither of the usual ways
+> in exists. I got here on a certificate SIA signed for this one session, valid
+> for minutes and single-use. There is no standing credential to steal, share,
+> or forget to revoke.
+
+If someone asks whether the account is "ephemeral": be precise -- on Linux the
+*certificate* is ephemeral, not the account. SIA logs in as an existing local
+user (that's how certificate SSH works) but the account is inert without a
+live SIA-signed cert. On Windows/RDP, SIA can provision a genuinely ephemeral
+OS user; that's a different mechanism, noted below.
 
 If someone asks how the box trusts the certificate: `sudo cat /etc/ssh/sshd_config
 | grep TrustedUserCAKeys`. The CA went on at boot via cloud-init; the target has

@@ -44,7 +44,7 @@ still land a shell on it seconds after apply finishes.
 | `idsec_cmgr_pool` | Connector pool |
 | `idsec_cmgr_pool_identifier` | Scopes the pool to the **AWS subnet ID** Terraform just created |
 | `idsec_sia_access_connector` | Installs the connector onto the EC2 host over SSH |
-| `idsec_policy_vm` | Grants SSH to the target's private IP, as an ephemeral user |
+| `idsec_policy_vm` | Grants SSH to the target's private IP, via a short-lived certificate |
 
 Files map one-to-one: [network.tf](network.tf), [connector.tf](connector.tf),
 [target.tf](target.tf), [idira.tf](idira.tf).
