@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help preflight init plan up access proof down clean fmt validate
+.PHONY: help preflight init plan up verify access proof down clean fmt validate
 
 # Idira credentials live in a gitignored env file rather than your shell profile,
 # so they are scoped to this project. Every target that talks to the tenant
@@ -25,7 +25,11 @@ plan: init ## Show what would be created
 up: preflight init ## Stand up the whole demo (~5 min, most of it the connector install)
 	@$(LOAD_ENV) terraform apply -auto-approve
 	@echo
+	@$(LOAD_ENV) ./scripts/verify.py || true
 	@$(LOAD_ENV) terraform output -raw connect
+
+verify: ## Check the deployed demo is in the state the pitch claims
+	@$(LOAD_ENV) ./scripts/verify.py
 
 access: ## Print how to connect through SIA
 	@$(LOAD_ENV) terraform output -raw connect
