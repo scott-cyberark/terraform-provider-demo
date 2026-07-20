@@ -1,0 +1,23 @@
+# Terraform state may contain the SSH private key and instance detail.
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+
+# .terraform.lock.hcl is intentionally NOT ignored -- committing it pins provider
+# versions so anyone cloning this demo resolves exactly what was tested.
+
+# Real values, including the tenant subdomain.
+terraform.tfvars
+*.auto.tfvars
+
+# Generated SSH keypair for the connector.
+*.pem
+keys/
+
+# Service user credentials. Never commit.
+*.env
+.envrc
+
+# Local tool settings, machine-specific.
+.claude/
