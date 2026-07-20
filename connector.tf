@@ -63,10 +63,14 @@ resource "idsec_cmgr_pool" "demo" {
 # Tells SIA which pool can reach a given target. Identifying the pool by the
 # exact AWS subnet Terraform just created is a stronger demo beat than a
 # wildcard FQDN: the pool is scoped to this subnet and nothing else.
+#
+# AWS_SUBNET values must be "<vpc-id>/<subnet-id>". A bare subnet ID is rejected
+# with a 400 "Identifier value does not match the required format", which the
+# provider docs do not mention.
 resource "idsec_cmgr_pool_identifier" "private_subnet" {
   pool_id = idsec_cmgr_pool.demo.pool_id
   type    = "AWS_SUBNET"
-  value   = aws_subnet.private.id
+  value   = "${aws_vpc.demo.id}/${aws_subnet.private.id}"
 }
 
 # --- Connector installation -------------------------------------------------

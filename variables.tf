@@ -177,13 +177,23 @@ variable "access_window_days" {
 }
 
 variable "access_window_from_hour" {
-  description = "Start of the policy's daily access window (HH:MM)."
+  description = "Start of the policy's daily access window. Must be HH:MM:SS -- the API rejects HH:MM even though the provider docs show it."
   type        = string
-  default     = "00:00"
+  default     = "00:00:00"
+
+  validation {
+    condition     = can(regex("^\\d{2}:\\d{2}:\\d{2}$", var.access_window_from_hour))
+    error_message = "access_window_from_hour must be HH:MM:SS, e.g. 09:00:00."
+  }
 }
 
 variable "access_window_to_hour" {
-  description = "End of the policy's daily access window (HH:MM)."
+  description = "End of the policy's daily access window. Must be HH:MM:SS."
   type        = string
-  default     = "23:59"
+  default     = "23:59:59"
+
+  validation {
+    condition     = can(regex("^\\d{2}:\\d{2}:\\d{2}$", var.access_window_to_hour))
+    error_message = "access_window_to_hour must be HH:MM:SS, e.g. 17:00:00."
+  }
 }
