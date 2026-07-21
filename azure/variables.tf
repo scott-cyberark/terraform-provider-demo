@@ -62,16 +62,22 @@ variable "admin_cidr" {
 
 # --- VMs --------------------------------------------------------------------
 
+# VM sizes vary in availability by region and subscription. The burstable
+# B-series is the most commonly capacity-restricted (SkuNotAvailable); D-series
+# is the reliable default. If these are also restricted in your region, check
+# what is available and override, or pick another region:
+#   az vm list-skus -l <region> --size Standard_D2s_v3 --query "[].restrictions" -o json
+#   (empty [] means available)
 variable "connector_vm_size" {
   description = "Size for the SIA connector VM (wants ~2 vCPU / 4 GB)."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_D2s_v3"
 }
 
 variable "target_vm_size" {
   description = "Size for the demo target VM."
   type        = string
-  default     = "Standard_B1s"
+  default     = "Standard_D2s_v3"
 }
 
 # --- Idira ------------------------------------------------------------------
