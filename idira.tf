@@ -29,7 +29,9 @@ resource "idsec_policy_vm" "demo" {
 
     policy_entitlement = {
       target_category = "VM"
-      location_type   = "FQDN/IP"
+      # Must agree with the targets block below: AWS-attribute matching is an
+      # "AWS" location, direct IP matching is "FQDN/IP".
+      location_type = var.policy_target_mode == "aws" ? "AWS" : "FQDN/IP"
     }
 
     status = {
@@ -59,11 +61,29 @@ resource "idsec_policy_vm" "demo" {
     idle_time            = var.idle_time
   }
 
-  # Scoped to the one instance Terraform just created, by its private address.
-  # Nothing else in the VPC is in scope -- not the connector, not a future
-  # instance in the same subnet.
+  # Two ways to scope the policy to our one instance, selected by
+  # var.policy_target_mode. Exactly one block is non-null.
+  #
+  # "aws" (default): match by AWS attributes -- our VPC plus the instance's own
+  #   Role tag. SIA resolves this through the account's cloud-workspace
+  #   discovery, so the policy never hardcodes an address. The tag matters: the
+  #   connector shares this VPC, so VPC alone would also grant access to it.
+  #
+  # "fqdnip": match the instance's private IP directly. No cloud discovery
+  #   dependency -- the reliable fallback if AWS discovery has not caught up.
   targets = {
-    fqdnip_resource = {
+    aws_resource = var.policy_target_mode == "aws" ? {
+      vpc_ids = [aws_vpc.demo.id]
+      tags = [
+        {
+          key = "Role"
+          # Sourced from the instance's own tag so the two cannot drift.
+          value = [aws_instance.target.tags["Role"]]
+        }
+      ]
+    } : null
+
+    fqdnip_resource = var.policy_target_mode == "fqdnip" ? {
       ip_rules = [
         {
           operator     = "EXACTLY"
@@ -71,7 +91,7 @@ resource "idsec_policy_vm" "demo" {
           logical_name = idsec_cmgr_network.demo.name
         }
       ]
-    }
+    } : null
   }
 
   behavior = {

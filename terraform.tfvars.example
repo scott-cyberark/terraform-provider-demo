@@ -22,6 +22,11 @@ demo_name  = "idira-sia-demo"
 # You must be a member of this role or the connect step will fail on stage.
 policy_role_name = "Demo Admins"
 
+# How the policy identifies the target: "aws" (match by VPC + Role tag, via cloud
+# discovery) or "fqdnip" (match the private IP directly). Flip to "fqdnip" if AWS
+# discovery does not resolve the instance during a live run.
+# policy_target_mode = "aws"
+
 # Only needed for multiple principals, or USER/GROUP types (which also require
 # source_directory_id and source_directory_name). Overrides policy_role_name.
 # policy_principals = [{

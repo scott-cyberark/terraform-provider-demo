@@ -142,6 +142,28 @@ variable "policy_principals" {
   default = null
 }
 
+variable "policy_target_mode" {
+  description = <<-EOT
+    How the VM policy identifies the target.
+
+    "aws" (default): match by AWS attributes -- the demo VPC plus the instance's
+    Role tag. Attribute-based and decoupled from the address, but SIA resolves it
+    through the account's cloud-workspace discovery, so it depends on that
+    integration covering this VPC and can lag for a just-created instance.
+
+    "fqdnip": match the instance's private IP directly. No discovery dependency;
+    the reliable fallback, and what has been proven end to end. Flip to this in
+    terraform.tfvars if AWS targeting does not resolve during a live demo.
+  EOT
+  type        = string
+  default     = "aws"
+
+  validation {
+    condition     = contains(["aws", "fqdnip"], var.policy_target_mode)
+    error_message = "policy_target_mode must be \"aws\" or \"fqdnip\"."
+  }
+}
+
 variable "ephemeral_username" {
   description = <<-EOT
     The local account SIA logs in as. For Linux SSH, SIA authenticates as an

@@ -39,8 +39,10 @@ false`.
 
 Then `idira.tf`:
 
-- `targets.fqdnip_resource.ip_rules` is derived from `aws_instance.target.private_ip`
-  — an attribute of the instance being created in the same apply.
+- `targets` matches the instance by its VPC and `Role` tag (with `policy_target_mode
+  = "aws"`) — attribute-based, so the policy names no address. The `Role` tag is
+  what scopes it to the target and not the connector, which shares the VPC.
+  (Flip to `"fqdnip"` to match the private IP directly if cloud discovery lags.)
 - `behavior.ssh_profile.username` is the local account SIA logs in as. The same
   account is created on the target in `target.tf` with no password and no SSH
   key -- so the only way in is the short-lived certificate SIA signs per session.
