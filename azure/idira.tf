@@ -37,8 +37,11 @@ module "idira" {
     subscriptions   = [data.azurerm_client_config.current.subscription_id]
     resource_groups = [azurerm_resource_group.demo.name]
     regions         = [var.azure_location]
-    # UNVERIFIED FORMAT: VNet full ARM id vs name -- adjust if azure targeting 400s.
-    network_ids  = [azurerm_virtual_network.demo.id]
+    # vnet_ids intentionally omitted: its exact format (ARM id vs name vs guid) is
+    # unverified, and it is the most likely cause of the policy's "missing resource"
+    # error. Subscription + resource group + region + the Role tag already single
+    # out our target. Add it back (network_ids = [...]) once the format is known.
+    network_ids  = null
     tag_key      = "Role"
     tag_value    = azurerm_linux_virtual_machine.target.tags["Role"]
     private_ip   = azurerm_network_interface.target.private_ip_address
