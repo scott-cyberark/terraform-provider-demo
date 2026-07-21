@@ -21,3 +21,4 @@ keys/
 
 # Local tool settings, machine-specific.
 .claude/
+.vscode/

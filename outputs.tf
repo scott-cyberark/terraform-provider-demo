@@ -45,12 +45,13 @@ output "connect" {
     Instance id: ${aws_instance.target.id}
     Private IP:  ${aws_instance.target.private_ip}
 
-    Connect via the SIA CLI, targeting the ${var.policy_target_mode == "aws" ? "instance id" : "private IP"}:
-      sia ssh connect --target ${var.policy_target_mode == "aws" ? aws_instance.target.id : aws_instance.target.private_ip}
+    Connect through SIA, targeting the ${var.policy_target_mode == "aws" ? "instance id" : "private IP"}.
 
-    Or in the Idira portal: Secure Infrastructure Access -> Connect -> SSH, then
-    pick ${aws_instance.target.id} (${aws_instance.target.private_dns}). The portal's
-    Connect dialog shows the exact command for your tenant.
+    With the cybr-ssh helper:
+      cybr-ssh ${var.policy_target_mode == "aws" ? aws_instance.target.id : aws_instance.target.private_ip}
+
+    Or plain ssh through the SIA proxy (replace <you> with your Idira user):
+      ssh <you>#${var.idsec_subdomain}@${var.policy_target_mode == "aws" ? aws_instance.target.id : aws_instance.target.private_ip}@${var.idsec_subdomain}.ssh.cyberark.cloud
 
     You land as '${var.ephemeral_username}' on a certificate valid for this
     session only.
