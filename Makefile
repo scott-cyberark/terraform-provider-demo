@@ -10,6 +10,12 @@
 ENV_FILE ?= idira-demo.env
 LOAD_ENV = set -a; if [ -f $(ENV_FILE) ]; then . ./$(ENV_FILE); fi; set +a;
 
+# All AWS access -- Terraform's provider and the aws CLI in preflight/verify/proof
+# -- uses this profile. SCA writes elevated credentials to 'cyberark_elevated'.
+# Override with: make up AWS_PROFILE=default
+AWS_PROFILE ?= cyberark_elevated
+export AWS_PROFILE
+
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
