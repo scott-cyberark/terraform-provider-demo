@@ -53,6 +53,18 @@ if [ "$CLOUD" = "azure" ]; then
     ACCT=$(az account show --output json 2>&1)
     if [ $? -eq 0 ]; then
       ok "Azure logged in: $(echo "$ACCT" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["name"],"("+d["id"]+")")' 2>/dev/null)"
+      # The demo needs these resource providers registered on the subscription.
+      # Terraform's auto-registration is disabled (a restricted account can't do it),
+      # so check here and point at the one-time fix.
+      for RP in Microsoft.Network Microsoft.Compute; do
+        STATE=$(az provider show -n "$RP" --query registrationState -o tsv 2>/dev/null)
+        if [ "$STATE" = "Registered" ]; then
+          ok "$RP registered"
+        else
+          bad "$RP not registered (state: ${STATE:-unknown})"
+          note "az provider register --namespace $RP --wait"
+        fi
+      done
     else
       bad "not logged in to Azure"
       note "az login   (then: az account set --subscription <id>)"

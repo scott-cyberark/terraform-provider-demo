@@ -126,6 +126,15 @@ See [DEMO.md](DEMO.md) for the run-of-show.
 ### Azure notes
 
 - Auth is `az login`; the region defaults to `eastus` (`azure_location`).
+- Your account needs **Contributor** on the subscription (or on the resource group).
+- The subscription must have the `Microsoft.Network` and `Microsoft.Compute`
+  resource providers registered. Terraform's auto-registration is disabled (see
+  [azure/providers.tf](azure/providers.tf)), so register them once yourself —
+  `make preflight CLOUD=azure` checks this and prints the command:
+  ```bash
+  az provider register --namespace Microsoft.Network --wait
+  az provider register --namespace Microsoft.Compute --wait
+  ```
 - Policy targeting defaults to `fqdnip` (match the private IP) because Azure
   cloud discovery for VM policies is unverified in this tenant. Set
   `policy_target_mode = "azure"` once the subscription is confirmed onboarded.
