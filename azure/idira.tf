@@ -34,18 +34,17 @@ module "idira" {
 
   policy_target_mode = var.policy_target_mode
   target = {
-    subscriptions   = [data.azurerm_client_config.current.subscription_id]
-    resource_groups = [azurerm_resource_group.demo.name]
+    subscriptions = [data.azurerm_client_config.current.subscription_id]
+    # SIA stores resource groups and VNets as full ARM resource paths, not names
+    # -- confirmed against a working policy in the tenant. The .id attributes give
+    # exactly that (/subscriptions/<sub>/resourceGroups/<rg>[/providers/...]).
+    resource_groups = [azurerm_resource_group.demo.id]
     regions         = [var.azure_location]
-    # vnet_ids intentionally omitted: its exact format (ARM id vs name vs guid) is
-    # unverified, and it is the most likely cause of the policy's "missing resource"
-    # error. Subscription + resource group + region + the Role tag already single
-    # out our target. Add it back (network_ids = [...]) once the format is known.
-    network_ids  = null
-    tag_key      = "Role"
-    tag_value    = azurerm_linux_virtual_machine.target.tags["Role"]
-    private_ip   = azurerm_network_interface.target.private_ip_address
-    logical_name = var.demo_name
+    network_ids     = [azurerm_virtual_network.demo.id]
+    tag_key         = "Role"
+    tag_value       = azurerm_linux_virtual_machine.target.tags["Role"]
+    private_ip      = azurerm_network_interface.target.private_ip_address
+    logical_name    = var.demo_name
   }
 
   # The connector install SSHes into the public-subnet VM, so its networking
