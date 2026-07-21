@@ -1,13 +1,30 @@
 # Idira SIA — Terraform Provider Demo
 
 A self-contained demo of the [`cyberark/idsec`](https://registry.terraform.io/providers/cyberark/idsec/latest/docs)
-Terraform provider. One `terraform apply` builds an AWS network, installs a
-Secure Infrastructure Access connector, launches a target server, and creates the
-Idira access policy that governs it. One `terraform destroy` removes all of it,
-from both AWS and the tenant.
+Terraform provider, on **AWS or Azure**. One `make up` builds a cloud network,
+installs a Secure Infrastructure Access connector, launches a target server, and
+creates the Idira access policy that governs it. One `make down` removes all of
+it, from both the cloud and the tenant.
 
 The point it makes to a customer: **identity controls ship in the same commit,
 the same state file, and the same pipeline as the infrastructure they protect.**
+
+```bash
+make up               # AWS (default)
+make up CLOUD=azure   # Azure
+```
+
+## Layout
+
+The two clouds are separate Terraform roots that share one module for all the
+Idira/tenant wiring, so a tenant-side fix is made once:
+
+```
+modules/idira/   connector-mgmt network/pool/identifier, connector install, VM policy
+aws/             VPC, EC2 connector + target, calls modules/idira with AWS facts
+azure/           VNet, VM connector + target, calls modules/idira with Azure facts
+scripts/         shared: SSH-CA fetch, tenant auth, preflight, verify
+```
 
 ## What gets built
 
@@ -31,23 +48,24 @@ the same state file, and the same pipeline as the infrastructure they protect.**
    └─────────────────────────────────────────────────────────────────┘
 ```
 
-The target server has no public IP, no route to the internet gateway, no NAT
-gateway, and no SSH keypair in AWS or on your laptop. Its security group has
-exactly one inbound rule, referencing the connector's security group. You will
-still land a shell on it seconds after apply finishes.
+The target server has no public IP, no route off the network, and no usable SSH
+key (on AWS it has none; on Azure a generated admin key is discarded at apply).
+The only way in is on 22 from the connector, on a certificate SIA signs per
+session. The diagram shows AWS; Azure is the same shape (VNet, NSGs, private
+subnet with no egress).
 
-## Idira resources used
+## Idira resources used (shared module)
 
 | Resource | Role in the demo |
 |---|---|
 | `idsec_cmgr_network` | Logical network the pool belongs to |
 | `idsec_cmgr_pool` | Connector pool |
-| `idsec_cmgr_pool_identifier` | Scopes the pool to the **AWS subnet ID** Terraform just created |
-| `idsec_sia_access_connector` | Installs the connector onto the EC2 host over SSH |
-| `idsec_policy_vm` | Grants SSH to the target (matched by VPC + tag, or private IP), via a short-lived certificate |
+| `idsec_cmgr_pool_identifier` | Scopes the pool to the subnet (`AWS_SUBNET` / `AZURE_SUBNET`) |
+| `idsec_sia_access_connector` | Installs the connector onto the connector host over SSH |
+| `idsec_policy_vm` | Grants SSH to the target (matched by cloud attrs + tag, or private IP), via a short-lived certificate |
 
-Files map one-to-one: [network.tf](network.tf), [connector.tf](connector.tf),
-[target.tf](target.tf), [idira.tf](idira.tf).
+All live in [modules/idira/main.tf](modules/idira/main.tf); each root supplies the
+cloud-specific values.
 
 ## Before you present
 
@@ -73,15 +91,19 @@ Files map one-to-one: [network.tf](network.tf), [connector.tf](connector.tf),
    live demo. Every `make` target sources this file, so nothing needs to be
    exported in your shell.
 
-3. **AWS credentials** for an account you are happy to build a throwaway VPC in.
-   Note these are typically short-lived assumed-role tokens — refresh them
-   immediately before presenting, since an expiry mid-apply strands a
-   half-registered connector.
+3. **Cloud credentials** for an account/subscription you can build a throwaway
+   network in:
+   - **AWS** — short-lived (SCA-elevated) creds in the `cyberark_elevated`
+     profile. Refresh them immediately before presenting; an expiry mid-apply
+     strands a half-registered connector.
+   - **Azure** — `az login`, then `az account set --subscription <id>`.
 
-4. **Config:**
+4. **Config** (per cloud — each root has its own tfvars):
    ```bash
-   cp terraform.tfvars.example terraform.tfvars   # set idsec_subdomain + policy_role_name
-   make preflight
+   cp aws/terraform.tfvars.example   aws/terraform.tfvars      # set idsec_subdomain + policy_role_name
+   cp azure/terraform.tfvars.example azure/terraform.tfvars    # (only if using Azure)
+   make preflight                # AWS
+   make preflight CLOUD=azure    # Azure
    ```
 
 `make preflight` authenticates end to end and retrieves the SSH CA. If it
@@ -89,14 +111,28 @@ passes, the apply will work.
 
 ## Running it
 
+Add `CLOUD=azure` to any target for Azure (default is AWS):
+
 ```bash
 make up       # ~5 min, mostly the connector install
 make access   # how to connect
 make proof    # commands that substantiate the claims, to run on screen
-make down     # tear down AWS + tenant config
+make verify   # assert the deployed demo matches the pitch
+make down     # tear down the cloud + tenant config
 ```
 
 See [DEMO.md](DEMO.md) for the run-of-show.
+
+### Azure notes
+
+- Auth is `az login`; the region defaults to `eastus` (`azure_location`).
+- Policy targeting defaults to `fqdnip` (match the private IP) because Azure
+  cloud discovery for VM policies is unverified in this tenant. Set
+  `policy_target_mode = "azure"` once the subscription is confirmed onboarded.
+- Two Azure identifier value formats are best-effort guesses until a first live
+  run confirms them — the `AZURE_SUBNET` pool-identifier value and the policy's
+  `vnet_ids`. Both are flagged in [azure/idira.tf](azure/idira.tf); if an apply
+  returns a 400 on the identifier, that is the value to adjust.
 
 ## The one design decision worth knowing
 

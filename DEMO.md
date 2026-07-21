@@ -3,14 +3,18 @@
 About 12 minutes. Rehearse it once end to end before presenting — the connector
 install is slow and is the only part that can genuinely fail.
 
+This script uses AWS. For Azure, add `CLOUD=azure` to every `make` command
+(`make up CLOUD=azure`, etc.) and `az login` first; everything else is identical.
+The proven path is AWS — present Azure only after a full rehearsal on it.
+
 ## Before the room joins
 
 ```bash
-make preflight          # must be all green
 export PATH="/opt/homebrew/bin:$PATH"
+make preflight          # must be all green  (add CLOUD=azure for Azure)
 ```
 
-Have two terminals and the Idira portal open. Pin the SSH CA in
+Have two terminals and the Idira portal open. Pin the SSH CA in the cloud's
 `terraform.tfvars` (see README) so nothing depends on a live API call at plan
 time.
 

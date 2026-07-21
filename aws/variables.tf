@@ -203,38 +203,6 @@ variable "access_window_days" {
   default     = [0, 1, 2, 3, 4, 5, 6]
 }
 
-# NOTE: hour bounds on the access window are currently unusable, and this is a
-# provider bug rather than anything wrong with this config.
-#
-#   The SDK validates client-side against regexp ^\d{2}:\d{2}:\d{2}$ (HH:MM:SS),
-#   so "09:00" is rejected before the request is sent.
-#   The policy API rejects HH:MM:SS with "You must supply the hours timeframe in
-#   a 4 digits format. e.g. '10:00'" (fields hours_from / hours_to).
-#
-# No value satisfies both. Both fields are omitempty with no required tag, so
-# leaving them null skips client validation and omits them from the request --
-# which is the only combination that works today.
-#
-# Day-of-week restriction is unaffected and still enforced.
-
-variable "access_window_from_hour" {
-  description = "Start of the daily access window. Leave null -- see the note above; any non-null value currently fails."
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.access_window_from_hour == null
-    error_message = "Hour bounds are broken upstream: the SDK requires HH:MM:SS but the policy API requires HH:MM. Leave this null until the provider is fixed."
-  }
-}
-
-variable "access_window_to_hour" {
-  description = "End of the daily access window. Leave null -- see the note above; any non-null value currently fails."
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.access_window_to_hour == null
-    error_message = "Hour bounds are broken upstream: the SDK requires HH:MM:SS but the policy API requires HH:MM. Leave this null until the provider is fixed."
-  }
-}
+# Hour bounds (from_hour/to_hour) are intentionally omitted: the SDK validates
+# them as HH:MM:SS client-side while the policy API demands HH:MM, so no value
+# satisfies both. The module leaves them unset. Day-of-week is still enforced.

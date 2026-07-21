@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in. Credentials are NOT here -- idsec reads
+# them from the environment; Azure uses your `az login` session.
+
+# Required: your Idira tenant subdomain, e.g. "acme" for acme.cyberark.cloud.
+idsec_subdomain = "CHANGEME"
+
+azure_location = "eastus"
+demo_name      = "idira-sia-demo"
+
+# The Idira role granted access. You must be a member, or the connect step fails.
+policy_role_name = "Demo Admins"
+
+# "fqdnip" (default, reliable) matches the private IP. "azure" matches by
+# subscription + resource group + VNet + Role tag, but needs the subscription
+# onboarded to SIA cloud discovery -- switch only once that is confirmed.
+# policy_target_mode = "azure"
+
+# Optional. Leave unset to auto-detect your public IP for the connector install.
+# admin_cidr = "203.0.113.4/32"

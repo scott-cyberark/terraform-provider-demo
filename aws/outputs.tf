@@ -25,12 +25,12 @@ output "connector_public_ip" {
 
 output "connector_pool_id" {
   description = "Connector Management pool the connector registered into."
-  value       = idsec_cmgr_pool.demo.pool_id
+  value       = module.idira.pool_id
 }
 
 output "policy_id" {
   description = "The VM access policy created for this demo."
-  value       = idsec_policy_vm.demo.metadata.policy_id
+  value       = module.idira.policy_id
 }
 
 output "ephemeral_username" {

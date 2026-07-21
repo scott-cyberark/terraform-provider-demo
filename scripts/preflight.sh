@@ -7,6 +7,9 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
+# Which cloud root we are checking (aws|azure).
+CLOUD="${CLOUD:-aws}"
+
 # Load credentials the same way the Makefile does, so running this script
 # directly behaves identically to `make preflight`. Anything already exported in
 # the environment wins over the file.
@@ -41,15 +44,30 @@ fi
 command -v python3 >/dev/null 2>&1 && ok "python3" || bad "python3 not on PATH"
 
 echo
-echo "AWS"
-CALLER=$(aws sts get-caller-identity --output json 2>&1)
-if [ $? -eq 0 ]; then
-  ok "credentials valid for $(echo "$CALLER" | python3 -c 'import json,sys;print(json.load(sys.stdin)["Arn"])')"
-  REGION=$(aws configure get region 2>/dev/null || echo "${AWS_REGION:-unset}")
-  ok "region: ${REGION:-unset}"
+echo "Cloud: $CLOUD"
+if [ "$CLOUD" = "azure" ]; then
+  if ! command -v az >/dev/null 2>&1; then
+    bad "az CLI not on PATH"
+    note "brew install azure-cli"
+  else
+    ACCT=$(az account show --output json 2>&1)
+    if [ $? -eq 0 ]; then
+      ok "Azure logged in: $(echo "$ACCT" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["name"],"("+d["id"]+")")' 2>/dev/null)"
+    else
+      bad "not logged in to Azure"
+      note "az login   (then: az account set --subscription <id>)"
+    fi
+  fi
 else
-  bad "aws sts get-caller-identity failed"
-  note "$(echo "$CALLER" | head -1)"
+  CALLER=$(aws sts get-caller-identity --output json 2>&1)
+  if [ $? -eq 0 ]; then
+    ok "AWS credentials valid for $(echo "$CALLER" | python3 -c 'import json,sys;print(json.load(sys.stdin)["Arn"])')"
+    ok "AWS profile: ${AWS_PROFILE:-default}"
+  else
+    bad "aws sts get-caller-identity failed (profile ${AWS_PROFILE:-default})"
+    note "$(echo "$CALLER" | head -1)"
+    note "refresh your SCA-elevated credentials"
+  fi
 fi
 
 echo
@@ -65,13 +83,14 @@ if [ -n "${IDSEC_SERVICE_USER:-}" ]; then ok "IDSEC_SERVICE_USER set"; else bad 
 if [ -n "${IDSEC_SERVICE_TOKEN:-}" ]; then ok "IDSEC_SERVICE_TOKEN set"; else bad "IDSEC_SERVICE_TOKEN not set"; fi
 
 SUBDOMAIN=""
-if [ -f terraform.tfvars ]; then
-  SUBDOMAIN=$(grep -E '^\s*idsec_subdomain' terraform.tfvars 2>/dev/null | head -1 | cut -d'"' -f2)
+TFVARS="$CLOUD/terraform.tfvars"
+if [ -f "$TFVARS" ]; then
+  SUBDOMAIN=$(grep -E '^\s*idsec_subdomain' "$TFVARS" 2>/dev/null | head -1 | cut -d'"' -f2)
 fi
 
 if [ -z "$SUBDOMAIN" ] || [ "$SUBDOMAIN" = "CHANGEME" ]; then
-  bad "idsec_subdomain not set in terraform.tfvars"
-  note "cp terraform.tfvars.example terraform.tfvars, then fill it in"
+  bad "idsec_subdomain not set in $TFVARS"
+  note "cp $CLOUD/terraform.tfvars.example $TFVARS, then fill it in"
 else
   ok "tenant subdomain: $SUBDOMAIN"
 
