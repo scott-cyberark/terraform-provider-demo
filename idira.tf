@@ -73,7 +73,12 @@ resource "idsec_policy_vm" "demo" {
   #   dependency -- the reliable fallback if AWS discovery has not caught up.
   targets = {
     aws_resource = var.policy_target_mode == "aws" ? {
-      vpc_ids = [aws_vpc.demo.id]
+      # Account + region + VPC key the match to this exact workspace, the way SIA
+      # discovers instances; the Role tag then selects the target within it (the
+      # connector shares this VPC, so VPC alone would include it).
+      account_ids = [data.aws_caller_identity.current.account_id]
+      regions     = [var.aws_region]
+      vpc_ids     = [aws_vpc.demo.id]
       tags = [
         {
           key = "Role"

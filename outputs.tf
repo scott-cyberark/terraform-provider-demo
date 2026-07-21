@@ -42,13 +42,17 @@ output "connect" {
   description = "How to reach the target through SIA."
   value       = <<-EOT
 
-    Connect via the SIA CLI:
-      sia ssh connect --target ${aws_instance.target.private_ip}
+    Instance id: ${aws_instance.target.id}
+    Private IP:  ${aws_instance.target.private_ip}
 
-    Or from the Idira portal: Secure Infrastructure Access -> Connect -> SSH,
-    then pick ${aws_instance.target.private_dns}.
+    Connect via the SIA CLI, targeting the ${var.policy_target_mode == "aws" ? "instance id" : "private IP"}:
+      sia ssh connect --target ${var.policy_target_mode == "aws" ? aws_instance.target.id : aws_instance.target.private_ip}
 
-    You will land as '${var.ephemeral_username}' on a certificate valid for this
+    Or in the Idira portal: Secure Infrastructure Access -> Connect -> SSH, then
+    pick ${aws_instance.target.id} (${aws_instance.target.private_dns}). The portal's
+    Connect dialog shows the exact command for your tenant.
+
+    You land as '${var.ephemeral_username}' on a certificate valid for this
     session only.
   EOT
 }

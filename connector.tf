@@ -8,6 +8,9 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+# Account id for the AWS-attribute policy target.
+data "aws_caller_identity" "current" {}
+
 # --- Connector SSH keypair --------------------------------------------------
 # Generated per-apply and destroyed with everything else, so the demo leaves
 # nothing behind in ~/.ssh and needs no pre-existing key.
