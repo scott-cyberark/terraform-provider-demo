@@ -23,8 +23,12 @@ locals {
     fqdnip = "FQDN/IP"
   }[var.policy_target_mode]
 
-  # One tag list shared by the aws/azure branches.
-  target_tags = [
+  # Tag filter, if a tag value is supplied. AWS discovery surfaces instance tags,
+  # so the tag pins the policy to exactly the target. Azure discovery does not
+  # currently surface VM tags for policy matching, so the Azure root passes a null
+  # tag_value and scopes by resource group + VNet + region instead (matching how a
+  # working policy is built in the tenant). An empty list means "no tag filter".
+  target_tags = var.target.tag_value == null ? [] : [
     {
       key   = var.target.tag_key
       value = [var.target.tag_value]

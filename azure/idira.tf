@@ -41,10 +41,14 @@ module "idira" {
     resource_groups = [azurerm_resource_group.demo.id]
     regions         = [var.azure_location]
     network_ids     = [azurerm_virtual_network.demo.id]
-    tag_key         = "Role"
-    tag_value       = azurerm_linux_virtual_machine.target.tags["Role"]
-    private_ip      = azurerm_network_interface.target.private_ip_address
-    logical_name    = var.demo_name
+    # No tag filter on Azure: SIA's Azure discovery does not surface VM tags for
+    # policy matching (a tag-filtered policy fails "missing resource" while the
+    # same filter works on AWS). Scope by resource group + VNet + region instead
+    # -- this RG is dedicated to the demo, and only the target trusts the SIA CA,
+    # so the connector VM in the same RG is not actually cert-reachable.
+    tag_value    = null
+    private_ip   = azurerm_network_interface.target.private_ip_address
+    logical_name = var.demo_name
   }
 
   # The connector install SSHes into the public-subnet VM, so its networking
