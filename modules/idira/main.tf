@@ -48,12 +48,15 @@ resource "idsec_cmgr_pool" "demo" {
   assigned_network_ids = [idsec_cmgr_network.demo.network_id]
 }
 
-# Scopes the pool to the exact subnet the root created. The value format is
-# cloud-specific and set by the root (e.g. AWS_SUBNET is "<vpc-id>/<subnet-id>").
-resource "idsec_cmgr_pool_identifier" "target_subnet" {
+# Scopes the pool to the targets it serves. Value formats are cloud-specific and
+# set by the root (AWS_SUBNET is "<vpc-id>/<subnet-id>"; Azure types take full ARM
+# resource paths). A pool may carry several identifiers.
+resource "idsec_cmgr_pool_identifier" "target" {
+  for_each = { for i in var.pool_identifiers : "${i.type}:${i.value}" => i }
+
   pool_id = idsec_cmgr_pool.demo.pool_id
-  type    = var.pool_identifier_type
-  value   = var.pool_identifier_value
+  type    = each.value.type
+  value   = each.value.value
 }
 
 # --- Connector installation -------------------------------------------------
@@ -150,6 +153,6 @@ resource "idsec_policy_vm" "demo" {
   # Only enforceable once a connector in the pool can reach the target.
   depends_on = [
     idsec_sia_access_connector.demo,
-    idsec_cmgr_pool_identifier.target_subnet,
+    idsec_cmgr_pool_identifier.target,
   ]
 }

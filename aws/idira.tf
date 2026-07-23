@@ -23,8 +23,12 @@ module "idira" {
 
   # AWS_SUBNET values must be "<vpc-id>/<subnet-id>" -- a bare subnet id is
   # rejected with a 400 the provider docs do not mention.
-  pool_identifier_type  = "AWS_SUBNET"
-  pool_identifier_value = "${aws_vpc.demo.id}/${aws_subnet.private.id}"
+  pool_identifiers = [
+    {
+      type  = "AWS_SUBNET"
+      value = "${aws_vpc.demo.id}/${aws_subnet.private.id}"
+    },
+  ]
 
   policy_target_mode = var.policy_target_mode
   target = {

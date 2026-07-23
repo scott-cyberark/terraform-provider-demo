@@ -77,16 +77,22 @@ variable "connector_private_key_path" {
   description = "Path to the private key file used to reach the connector host."
 }
 
-# --- Pool identifier --------------------------------------------------------
+# --- Pool identifiers -------------------------------------------------------
 
-variable "pool_identifier_type" {
-  type        = string
-  description = "AWS_SUBNET, AZURE_SUBNET, etc."
-}
+variable "pool_identifiers" {
+  description = <<-EOT
+    One or more identifiers telling SIA which targets this connector pool serves.
+    A pool can carry several: e.g. a GENERAL_CIDR_BLOCK for IP-based reach plus an
+    AZURE_VNET so the pool is also associated with the cloud network.
 
-variable "pool_identifier_value" {
-  type        = string
-  description = "Cloud-specific identifier value (format differs per type)."
+    Types: GENERAL_CIDR_BLOCK, GENERAL_FQDN, GENERAL_HOSTNAME, AWS_ACCOUNT_ID,
+    AWS_VPC, AWS_SUBNET, AZURE_SUBSCRIPTION, AZURE_VNET, AZURE_SUBNET, GCP_*.
+    Value formats differ per type -- Azure wants full ARM resource paths.
+  EOT
+  type = list(object({
+    type  = string
+    value = string
+  }))
 }
 
 # --- Policy target ----------------------------------------------------------

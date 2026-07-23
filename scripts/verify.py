@@ -64,23 +64,26 @@ def sh(*args):
 
 
 def tf_resources(cloud):
-    """Map "type.name" -> attribute dict, from the cloud root's state
-    (including resources inside module.idira)."""
+    """Return (by_name, every) from the cloud root's state, including resources
+    inside module.idira. `every` is a flat list of (type, values) so for_each
+    resources -- which share one "type.name" key -- are all visible."""
     rc, out, err = sh("terraform", f"-chdir={cloud}", "show", "-json")
     if rc != 0:
         print(f"could not read terraform state for {cloud}: {err}", file=sys.stderr)
         sys.exit(2)
     state = json.loads(out)
-    found = {}
+    found, every = {}, []
 
     def walk(module):
         for res in module.get("resources", []):
-            found[f"{res['type']}.{res['name']}"] = res.get("values", {})
+            values = res.get("values", {})
+            found[f"{res['type']}.{res['name']}"] = values
+            every.append((res["type"], values))
         for child in module.get("child_modules", []):
             walk(child)
 
     walk(state.get("values", {}).get("root_module", {}))
-    return found
+    return found, every
 
 
 def read_tfvars(cloud):
@@ -176,7 +179,7 @@ def check_azure(res):
 
 # --- shared tenant checks ---------------------------------------------------
 
-def check_tenant(res, subdomain):
+def check_tenant(res, every, subdomain):
     print("\nIdira: did the tenant config actually land?")
     try:
         token = platform_token(subdomain)
@@ -197,14 +200,17 @@ def check_tenant(res, subdomain):
     except IdiraError as exc:
         warn("could not list connector components", str(exc))
 
-    expected_ident = res.get("idsec_cmgr_pool_identifier.target_subnet", {}).get("value", "")
+    # A pool may carry several identifiers (for_each), so check every one.
+    expected = [v.get("value") for t, v in every
+                if t == "idsec_cmgr_pool_identifier" and v.get("value")]
     try:
         idents = as_list(get_json(subdomain, CMGR, f"api/pool-service/pools/{pool_id}/identifiers", token))
         values = [i.get("value") for i in idents]
-        if expected_ident and expected_ident in values:
-            ok("pool identifier scopes the pool to the demo subnet", expected_ident)
+        missing = [e for e in expected if e not in values]
+        if expected and not missing:
+            ok(f"pool identifiers present ({len(expected)})", "; ".join(expected))
         else:
-            bad("pool identifier missing", f"expected {expected_ident!r}, found {values}")
+            bad("pool identifier(s) missing", f"missing {missing}, found {values}")
     except IdiraError as exc:
         warn("could not list pool identifiers", str(exc))
 
@@ -234,7 +240,7 @@ def main():
     args = ap.parse_args()
     cloud = args.cloud
 
-    res = tf_resources(cloud)
+    res, every = tf_resources(cloud)
     if not res:
         print(f"\nNothing deployed in {cloud}/ -- state is empty. Run `make up CLOUD={cloud}` first.\n")
         sys.exit(2)
@@ -251,7 +257,7 @@ def main():
     else:
         check_azure(res)
 
-    check_tenant(res, subdomain)
+    check_tenant(res, every, subdomain)
     summary()
 
 

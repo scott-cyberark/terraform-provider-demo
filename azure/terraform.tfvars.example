@@ -5,7 +5,7 @@
 idsec_subdomain = "CHANGEME"
 
 azure_location = "eastus"
-demo_name      = "idira-sia-demo"
+demo_name      = "idira-sia-demo-azure"
 
 # The Idira role granted access. You must be a member, or the connect step fails.
 policy_role_name = "Demo Admins"

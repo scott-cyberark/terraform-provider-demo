@@ -19,18 +19,28 @@ module "idira" {
   connector_username         = "azureuser"
   connector_private_key_path = local_sensitive_file.connector_key.filename
 
-  # The pool identifier must describe the target the same way the policy does:
+  # What the pool serves. In fqdnip mode the connector reaches the target by IP,
+  # so a GENERAL_CIDR_BLOCK over the private subnet is what the policy matches on
+  # -- but we also attach the VNet so the pool is associated with the Azure
+  # network itself, not just a bare IP range. In azure mode the subnet identifier
+  # carries that association on its own.
   #
-  #   fqdnip mode -> GENERAL_CIDR_BLOCK over the private subnet. The connector
-  #     reaches the target by IP; no cloud workspace is involved. AZURE_SUBNET
-  #     would instead tag the pool as an Azure cloud workspace, which SIA can only
-  #     resolve if the subscription is onboarded -- and an un-onboarded one makes
-  #     policy creation fail with "unsupported workspace type or missing resource".
-  #
-  #   azure mode -> AZURE_SUBNET (the subnet's ARM id, which the API accepts).
-  #     Requires the subscription onboarded to SIA cloud discovery.
-  pool_identifier_type  = var.policy_target_mode == "azure" ? "AZURE_SUBNET" : "GENERAL_CIDR_BLOCK"
-  pool_identifier_value = var.policy_target_mode == "azure" ? azurerm_subnet.private.id : var.private_subnet_cidr
+  # Azure identifier values are full ARM resource paths (the .id attributes).
+  pool_identifiers = var.policy_target_mode == "azure" ? [
+    {
+      type  = "AZURE_SUBNET"
+      value = azurerm_subnet.private.id
+    },
+    ] : [
+    {
+      type  = "GENERAL_CIDR_BLOCK"
+      value = var.private_subnet_cidr
+    },
+    {
+      type  = "AZURE_VNET"
+      value = azurerm_virtual_network.demo.id
+    },
+  ]
 
   policy_target_mode = var.policy_target_mode
   target = {
